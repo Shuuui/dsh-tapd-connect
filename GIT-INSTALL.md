@@ -12,7 +12,7 @@
 在有网络的环境里创建空仓库，然后推送：
 
 ```powershell
-cd C:\Users\54375\Documents\deepseek-harness\default-workspace\plugins\dsh-tapd
+cd <插件仓库目录>
 
 git remote add origin https://github.com/<你的账号>/dsh-tapd-connect.git
 git push -u origin main
@@ -79,7 +79,7 @@ plugin_manager: {
 在开发机：
 
 ```powershell
-cd C:\Users\54375\Documents\deepseek-harness\default-workspace\plugins\dsh-tapd
+cd <插件仓库目录>
 git add -A
 git commit -m "fix: ..."
 git push
