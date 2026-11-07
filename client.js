@@ -15,7 +15,11 @@ window.__ModuleLoader__.load({
     /* -------------------------------------------------------------- */
 
     const CSS = `
+/* 三层 flex：头部/底栏固定，中间 .dsh-tapd-body 是唯一的滚动层。
+ * 根必须 overflow:hidden —— 否则内容一多就把根撑出中央列的高度，
+ * 中间层反而没有可滚动的空间，滚轮看起来就「没反应」。 */
 .dsh-tapd { display:flex; flex-direction:column; height:100%; min-height:0;
+  overflow:hidden; box-sizing:border-box;
   color:var(--dsw-alias-label-primary); background:var(--dsw-alias-bg-base);
   font-size:13px; }
 .dsh-tapd-head { display:flex; align-items:center; gap:10px; padding:14px 18px;
@@ -23,7 +27,8 @@ window.__ModuleLoader__.load({
 .dsh-tapd-title { font-size:15px; font-weight:600; }
 .dsh-tapd-sub { color:var(--dsw-alias-label-secondary); font-size:12px; }
 .dsh-tapd-grow { flex:1 1 auto; }
-.dsh-tapd-body { flex:1 1 auto; min-height:0; overflow:auto; padding:14px 18px 24px; }
+.dsh-tapd-body { flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden;
+  overscroll-behavior:contain; padding:14px 18px 24px; }
 .dsh-tapd-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .dsh-tapd-stack { display:flex; flex-direction:column; gap:10px; }
 .dsh-tapd-card { border:1px solid var(--dsw-alias-border-l1); border-radius:10px;
@@ -68,7 +73,8 @@ window.__ModuleLoader__.load({
 .dsh-tapd-chip { font-size:11px; padding:1px 6px; border-radius:6px;
   background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-secondary);
   border:1px solid var(--dsw-alias-border-l1); }
-.dsh-tapd-bar { position:sticky; bottom:0; display:flex; align-items:center; gap:8px;
+/* 底栏是 flex 的固定子项（不在滚动容器内），不需要 sticky。 */
+.dsh-tapd-bar { display:flex; align-items:center; gap:8px;
   padding:10px 18px; border-top:1px solid var(--dsw-alias-border-l1);
   background:var(--dsw-alias-bg-layer-1); flex:0 0 auto; flex-wrap:wrap; }
 .dsh-tapd-count { font-size:12px; color:var(--dsw-alias-label-secondary); }
