@@ -15,16 +15,22 @@ window.__ModuleLoader__.load({
     /* -------------------------------------------------------------- */
 
     const CSS = `
-/* 三层 flex：头部/底栏固定，中间 .dsh-tapd-body 是唯一的滚动层。
+/* 布局：根吃满宿主 main 面板，中间 .dsh-tapd-body 是唯一滚动层。
  *
- * 高度用「撑满」而不是写死：宿主的 main 面板外层是
- * .mainPanel{flex:1;min-height:0;display:flex;flex-direction:column}，
- * 它只有 flex 分配的高度。根用 flex:1 + min-height:0 + overflow:hidden
- * 吃掉父容器给的高度，把滚动收敛到中间层。
+ * 宿主结构（取自 dsh-client-ui-layout）：
+ *   .frame{display:grid;grid-template-rows:minmax(0,1fr) auto;height:100%;overflow:hidden}
+ *   .centerCol{display:flex;flex-direction:column;overflow:hidden}
+ *   .mainPanel{display:flex;flex-direction:column;flex:1;min-height:0}
+ * slot 包裹层是 display:contents，所以本组件就是 .mainPanel 的直接 flex 子项。
  *
- * 另：样式此前是根的第一个子元素（<style>），它虽是 flex 子项却会占位，
- * 挤掉滚动层的高度，导致滚轮完全不动。现已改为挂到 document.head。 */
-.dsh-tapd { display:flex; flex-direction:column; flex:1 1 auto; min-height:0;
+ * 因此根必须同时拿到「确定高度」和「不被子项撑破」：
+ *   - height:100% 解析 .mainPanel 的确定高度；
+ *   - flex:1 + min-height:0 双保险，即便父级高度按 flex 分配也能吃满；
+ *   - overflow:hidden 把溢出交给内部滚动层，而不是撑破父级被裁掉。
+ * 滚动层用 flex:1 1 auto + min-height:0 + overflow-y:auto —— 这是 flex 列内
+ * 唯一可靠的滚动组合；缺 min-height:0 时子项会被压缩而非溢出，滚轮就完全不动。 */
+.dsh-tapd { display:flex; flex-direction:column; flex:1 1 auto;
+  height:100%; max-height:100%; min-height:0;
   overflow:hidden; box-sizing:border-box;
   color:var(--dsw-alias-label-primary); background:var(--dsw-alias-bg-base);
   font-size:13px; }
@@ -33,7 +39,9 @@ window.__ModuleLoader__.load({
 .dsh-tapd-title { font-size:15px; font-weight:600; }
 .dsh-tapd-sub { color:var(--dsw-alias-label-secondary); font-size:12px; }
 .dsh-tapd-grow { flex:1 1 auto; }
-.dsh-tapd-body { flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden;
+/* 唯一的滚动层。min-height:0 必不可少，否则 flex 子项被压缩、永不溢出。 */
+.dsh-tapd-body { display:flex; flex-direction:column; gap:10px;
+  flex:1 1 auto; min-height:0; overflow-y:auto; overflow-x:hidden;
   overscroll-behavior:contain; padding:14px 18px 24px; }
 .dsh-tapd-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
 .dsh-tapd-stack { display:flex; flex-direction:column; gap:10px; }
@@ -79,7 +87,7 @@ window.__ModuleLoader__.load({
 .dsh-tapd-chip { font-size:11px; padding:1px 6px; border-radius:6px;
   background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-secondary);
   border:1px solid var(--dsw-alias-border-l1); }
-/* 底栏是 flex 的固定子项（不在滚动容器内），不需要 sticky。 */
+/* 底栏是 flex 固定子项（不在滚动层内），不需要 sticky。 */
 .dsh-tapd-bar { display:flex; align-items:center; gap:8px;
   padding:10px 18px; border-top:1px solid var(--dsw-alias-border-l1);
   background:var(--dsw-alias-bg-layer-1); flex:0 0 auto; flex-wrap:wrap; }
