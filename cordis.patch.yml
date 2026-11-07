@@ -1,0 +1,20 @@
+# TAPD 需求处理：Host 半注册 `/plugins/dsh-tapd/*` 路由与 `tapd` 工具，
+# Client 半在侧边栏加入面板入口。令牌不进配置，保存在本机凭据库
+# （记录键 `dsh-tapd/pat`），这里只放非机密的账号与项目映射。
+- insert:
+    - id: tapd-connect
+      name: dsh-tapd-connect
+      config:
+        apiBase: https://api.tapd.cn
+        # 网页端根地址，用于面板里「打开项目」和条目链接的跳转。
+        # 和 apiBase 不是同一个域：API 走令牌，网页端走浏览器登录态。
+        webBase: https://www.tapd.cn
+        # 调用 Open API 的账号昵称（个人访问令牌方式）。
+        username: ''
+        # 可选：企业 ID，填写后才能从 TAPD 自动拉取参与的项目列表。
+        companyId: ''
+        # 手动维护的项目清单，也是自动拉取失败时的兜底。
+        projects: []
+        # TAPD 项目 -> DSH 工作区目录。未配置的项目使用 defaultPath。
+        mappings: []
+        defaultPath: ''
