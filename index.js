@@ -172,7 +172,8 @@ const ITEM_KINDS = {
     /** 筛选参数 → TAPD 查询串。 */
     filterQuery(filters) {
       return {
-        status: filters.status || undefined,
+        // 状态支持多选，TAPD 用 `|` 分隔多个取值。
+        status: statusQuery(filters.status),
         owner: filters.owner || undefined,
         creator: filters.creator || undefined,
         iteration_id: filters.iterationId || undefined,
@@ -223,7 +224,8 @@ const ITEM_KINDS = {
     },
     filterQuery(filters) {
       return {
-        status: filters.status || undefined,
+        // 状态支持多选，TAPD 用 `|` 分隔多个取值。
+        status: statusQuery(filters.status),
         current_owner: filters.owner || undefined,
         reporter: filters.creator || undefined,
         iteration_id: filters.iterationId || undefined,
@@ -256,6 +258,28 @@ function itemKind(value) {
  */
 function kindSpec(value) {
   return ITEM_KINDS[itemKind(value)]
+}
+
+/**
+ * 把状态筛选值拼成 TAPD 的多值查询串。
+ *
+ * TAPD Open API 用竖线分隔同字段的多个取值：`status=new|resolved`（实测：
+ * 返回并集 8832 条；换成逗号则返回 0，说明它不认逗号）。面板可以传数组，
+ * 也可以传已拼好的字符串，这里统一收敛，并去掉空值与重复项。
+ *
+ * @param {unknown} value 状态数组或单个状态字符串
+ * @returns {string|undefined} 形如 `new|resolved`，无有效值时 undefined
+ */
+function statusQuery(value) {
+  const list = Array.isArray(value) ? value : [value]
+  const kept = []
+  for (const entry of list) {
+    for (const piece of text(entry).split('|')) {
+      const item = piece.trim()
+      if (item !== '' && !kept.includes(item)) kept.push(item)
+    }
+  }
+  return kept.length === 0 ? undefined : kept.join('|')
 }
 
 /**

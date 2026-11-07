@@ -111,6 +111,21 @@ window.__ModuleLoader__.load({
   text-overflow:ellipsis; white-space:nowrap; }
 .dsh-tapd-map-path { flex:1 1 auto; min-width:0; font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size:11px; }
+/* 状态多选下拉 */
+.dsh-tapd-multi { position:relative; display:inline-block; }
+.dsh-tapd-multi-btn { display:inline-flex; align-items:center; justify-content:space-between;
+  gap:8px; min-width:120px; max-width:220px; text-align:left; cursor:pointer;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dsh-tapd-multi-caret { opacity:.6; flex:0 0 auto; }
+.dsh-tapd-multi-menu { position:absolute; top:34px; left:0; z-index:20; width:max-content;
+  min-width:180px; max-height:280px; overflow:auto; display:flex; flex-direction:column;
+  padding:4px; border:1px solid var(--dsw-alias-border-l1); border-radius:8px;
+  background:var(--dsw-alias-bg-layer-1); box-shadow:0 8px 24px rgba(24,43,80,.16); }
+.dsh-tapd-multi-opt { display:flex; align-items:center; gap:6px; font-size:12px;
+  padding:4px 8px; border-radius:6px; cursor:pointer; }
+.dsh-tapd-multi-opt:hover { background:var(--dsw-alias-bg-layer-2); }
+.dsh-tapd-multi-opt .dsh-tapd-check { margin-top:0; }
+.dsh-tapd-multi-all { height:26px; padding:0 8px; font-size:12px; }
 /* 开始处理前的工作区确认弹窗：用强调边框从卡片流里跳出来 */
 .dsh-tapd-dialog { border-color:var(--dsw-alias-brand-primary);
   box-shadow:0 6px 24px rgba(24,43,80,.12); }
@@ -367,7 +382,8 @@ window.__ModuleLoader__.load({
       const [kind, setKind] = React.useState('story')
       const [statuses, setStatuses] = React.useState([])
       const [filters, setFilters] = React.useState({
-        status: '',
+        // 状态支持多选：空数组 = 不限。
+        status: [],
         owner: '',
         keyword: '',
         iterationId: '',
@@ -382,6 +398,8 @@ window.__ModuleLoader__.load({
       const [scopeDraft, setScopeDraft] = React.useState([])
       /** 设置里草拟的默认条目类型，保存后才写入插件配置。 */
       const [kindDraft, setKindDraft] = React.useState('story')
+      /** 状态下拉菜单是否展开（多选）。 */
+      const [showStatusMenu, setShowStatusMenu] = React.useState(false)
       /** 处理人是否已按「自己」初始化过；置位后允许首屏那次查询带上它。 */
       const [ownerSeeded, setOwnerSeeded] = React.useState(false)
 
@@ -777,6 +795,27 @@ window.__ModuleLoader__.load({
       const allChecked = items.length > 0 && selectedIds.length === items.length
       const kindLabel = kind === 'bug' ? t('kindBug') : t('kindStory')
 
+      /** 切换单个状态的多选。 */
+      const toggleStatus = (id) =>
+        setFilters((current) => ({
+          ...current,
+          status: current.status.includes(id)
+            ? current.status.filter((item) => item !== id)
+            : [...current.status, id],
+        }))
+
+      /** 按钮上显示的已选状态文案：0 个=不限，1~2 个列名字，更多显示计数。 */
+      const statusText = (() => {
+        const chosen = filters.status
+        if (chosen.length === 0) return t('any')
+        const labels = chosen.map((id) => {
+          const found = statuses.find((item) => item.id === id)
+          return found ? found.label : id
+        })
+        if (labels.length <= 2) return labels.join('、')
+        return t('statusChosen', { count: String(labels.length) })
+      })()
+
       /* 认证卡片 */
       const authCard = h(
         'div',
@@ -1133,15 +1172,74 @@ window.__ModuleLoader__.load({
             Field,
             { label: t('filterStatus') },
             h(
-              'select',
-              {
-                className: 'dsh-tapd-select',
-                value: filters.status,
-                onChange: (event) =>
-                  setFilters((current) => ({ ...current, status: event.target.value })),
-              },
-              h('option', { value: '' }, t('any')),
-              statuses.map((item) => h('option', { key: item.id, value: item.id }, item.label)),
+              'div',
+              { className: 'dsh-tapd-multi' },
+              h(
+                'button',
+                {
+                  type: 'button',
+                  className: 'dsh-tapd-select dsh-tapd-multi-btn',
+                  onClick: (event) => {
+                    event.stopPropagation()
+                    setShowStatusMenu((current) => !current)
+                  },
+                  title: t('statusMultiHint'),
+                },
+                statusText,
+                h('span', { className: 'dsh-tapd-multi-caret', 'aria-hidden': 'true' }, '▾'),
+              ),
+              showStatusMenu
+                ? h(
+                    'div',
+                    { className: 'dsh-tapd-multi-menu' },
+                    h(
+                      'div',
+                      { className: 'dsh-tapd-row', style: { padding: '4px 6px' } },
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'dsh-tapd-btn dsh-tapd-btn-ghost dsh-tapd-multi-all',
+                          onClick: () => {
+                            const all = statuses.map((item) => item.id)
+                            setFilters((current) => ({
+                              ...current,
+                              status:
+                                current.status.length === all.length && all.length > 0 ? [] : all,
+                            }))
+                          },
+                        },
+                        Array.isArray(filters.status) && filters.status.length === statuses.length
+                          ? t('clearAll')
+                          : t('selectAll'),
+                      ),
+                      h(
+                        'button',
+                        {
+                          type: 'button',
+                          className: 'dsh-tapd-btn dsh-tapd-btn-ghost dsh-tapd-multi-all',
+                          onClick: () => setShowStatusMenu(false),
+                        },
+                        t('done'),
+                      ),
+                    ),
+                    statuses.length === 0
+                      ? h('div', { className: 'dsh-tapd-sub', style: { padding: 6 } }, t('loading'))
+                      : statuses.map((item) =>
+                          h(
+                            'label',
+                            { key: item.id, className: 'dsh-tapd-multi-opt' },
+                            h('input', {
+                              className: 'dsh-tapd-check',
+                              type: 'checkbox',
+                              checked: filters.status.includes(item.id),
+                              onChange: () => toggleStatus(item.id),
+                            }),
+                            h('span', null, item.label),
+                          ),
+                        ),
+                  )
+                : null,
             ),
           ),
           h(
@@ -1210,7 +1308,7 @@ window.__ModuleLoader__.load({
               className: 'dsh-tapd-btn dsh-tapd-btn-ghost',
               disabled: loading,
               onClick: () => {
-                const reset = { status: '', owner: '', keyword: '', iterationId: '' }
+                const reset = { status: [], owner: '', keyword: '', iterationId: '' }
                 setFilters(reset)
                 loadItems(projectId, reset, kind)
               },
@@ -1697,6 +1795,9 @@ window.__ModuleLoader__.load({
       selectAll: '全选',
       clearAll: '取消全选',
       filterStatus: '状态',
+      statusMultiHint: '可以多选；不选表示不限',
+      statusChosen: '已选 {count} 个状态',
+      done: '完成',
       filterOwner: '处理人',
       filterKeyword: '标题关键词',
       keywordHint: '模糊匹配',
@@ -1812,6 +1913,9 @@ window.__ModuleLoader__.load({
       selectAll: 'Select all',
       clearAll: 'Clear all',
       filterStatus: 'Status',
+      statusMultiHint: 'Pick one or more; nothing selected means any status',
+      statusChosen: '{count} statuses selected',
+      done: 'Done',
       filterOwner: 'Owner',
       filterKeyword: 'Title contains',
       keywordHint: 'Fuzzy match',
