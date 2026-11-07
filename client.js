@@ -16,9 +16,15 @@ window.__ModuleLoader__.load({
 
     const CSS = `
 /* 三层 flex：头部/底栏固定，中间 .dsh-tapd-body 是唯一的滚动层。
- * 根必须 overflow:hidden —— 否则内容一多就把根撑出中央列的高度，
- * 中间层反而没有可滚动的空间，滚轮看起来就「没反应」。 */
-.dsh-tapd { display:flex; flex-direction:column; height:100%; min-height:0;
+ *
+ * 高度用「撑满」而不是写死：宿主的 main 面板外层是
+ * .mainPanel{flex:1;min-height:0;display:flex;flex-direction:column}，
+ * 它只有 flex 分配的高度。根用 flex:1 + min-height:0 + overflow:hidden
+ * 吃掉父容器给的高度，把滚动收敛到中间层。
+ *
+ * 另：样式此前是根的第一个子元素（<style>），它虽是 flex 子项却会占位，
+ * 挤掉滚动层的高度，导致滚轮完全不动。现已改为挂到 document.head。 */
+.dsh-tapd { display:flex; flex-direction:column; flex:1 1 auto; min-height:0;
   overflow:hidden; box-sizing:border-box;
   color:var(--dsw-alias-label-primary); background:var(--dsw-alias-bg-base);
   font-size:13px; }
@@ -1551,7 +1557,6 @@ window.__ModuleLoader__.load({
       return h(
         'div',
         { className: 'dsh-tapd' },
-        h('style', null, CSS),
         h(
           'div',
           { className: 'dsh-tapd-head' },
@@ -1850,10 +1855,35 @@ window.__ModuleLoader__.load({
     /* 插件                                                            */
     /* -------------------------------------------------------------- */
 
+    /**
+     * 把样式挂到 `document.head`，**不要**放进面板根元素里。
+     *
+     * `<style>` 虽然不渲染，但它仍然是面板根的一个 flex 子项，会占位并参与
+     * flex 分配，把 `.dsh-tapd-body` 的可用高度挤掉——表现就是列表滚轮完全不动。
+     * 挂到 head 后根元素只剩真正的布局子项，高度才能正确地分给滚动层。
+     */
+    function installStyle(cssId, css) {
+      if (typeof document === 'undefined') return () => {}
+      const attr = 'data-dsh-tapd-css'
+      let tag = document.querySelector(`style[${attr}="${cssId}"]`)
+      if (tag === null) {
+        tag = document.createElement('style')
+        tag.setAttribute(attr, cssId)
+        document.head.appendChild(tag)
+      }
+      tag.textContent = css
+      return () => {
+        // 卸载时移除，避免热更新残留旧规则。
+        if (tag !== null && tag.parentNode !== null) tag.parentNode.removeChild(tag)
+      }
+    }
+
     const NS = 'tapd'
 
     function apply(ctx) {
       ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'dsh-tapd-connect: dictionaries')
+      // 样式挂在 head：放进面板根会占掉 flex 空间，导致列表无法滚动。
+      ctx.effect(() => installStyle('tapd-panel', CSS), 'dsh-tapd-connect: stylesheet')
       const t = ctx.locale.bind(NS)
 
       /** 面板内的转发能力：会话跳转与关闭面板都由宿主服务提供。 */
