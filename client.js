@@ -56,15 +56,21 @@ window.__ModuleLoader__.load({
   color:var(--dsw-alias-label-primary); font-size:12px; white-space:nowrap; }
 .dsh-tapd-btn:hover:not(:disabled) { border-color:var(--dsw-alias-border-l2); }
 .dsh-tapd-btn:disabled { opacity:.5; cursor:not-allowed; }
+/* 主按钮：底色是 brand-primary，前景必须用 label-primary-inverted。
+ * 不能写死白色——brand-primary 在暗色主题下是近白（#f9fafb），
+ * 白字压上去对比度只有 1.05，等于看不见。这个 token 会随主题反转
+ * （浅色给白、暗色给深色），两边的对比度都在 18:1 左右。 */
 .dsh-tapd-btn-primary { background:var(--dsw-alias-brand-primary); border-color:transparent;
-  color:#fff; font-weight:500; }
+  color:var(--dsw-alias-label-primary-inverted); font-weight:500; }
 .dsh-tapd-btn-ghost { background:transparent; }
 .dsh-tapd-seg { display:inline-flex; border:1px solid var(--dsw-alias-border-l1);
   border-radius:7px; overflow:hidden; }
 .dsh-tapd-seg button { height:30px; padding:0 14px; border:0; cursor:pointer;
   background:var(--dsw-alias-bg-layer-2); color:var(--dsw-alias-label-secondary);
   font-size:12px; }
-.dsh-tapd-seg button[data-on="1"] { background:var(--dsw-alias-brand-primary); color:#fff; }
+/* 选中态同理：brand 底色 + 反向前景色。 */
+.dsh-tapd-seg button[data-on="1"] { background:var(--dsw-alias-brand-primary);
+  color:var(--dsw-alias-label-primary-inverted); }
 .dsh-tapd-list { display:flex; flex-direction:column; border:1px solid var(--dsw-alias-border-l1);
   border-radius:10px; overflow:hidden; }
 .dsh-tapd-item { display:flex; gap:10px; padding:10px 12px; align-items:flex-start;
@@ -98,7 +104,10 @@ window.__ModuleLoader__.load({
   background:var(--dsw-alias-bg-layer-2); }
 .dsh-tapd-opt { display:flex; align-items:center; gap:6px; font-size:12px; padding:2px 0; }
 .dsh-tapd-opt span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.dsh-tapd-link { color:var(--dsw-alias-brand-primary); text-decoration:none; cursor:pointer; }
+/* 链接用专门的 link token（浅色 deepseek-500 / 暗色 deepseek-400），
+ * 比复用 brand-primary 更贴语义：brand 在浅色下是近黑、暗色下是近白，
+ * 当正文色尚可，但当"链接色"没有辨识度。 */
+.dsh-tapd-link { color:var(--dsw-alias-link); text-decoration:none; cursor:pointer; }
 .dsh-tapd-link:hover { text-decoration:underline; }
 /* 优先级配色。
  *
