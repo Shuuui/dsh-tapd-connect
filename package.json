@@ -20,7 +20,8 @@
     "locale/*.json",
     "icon.svg",
     "README.md",
-    "INSTALL.md"
+    "INSTALL.md",
+    "UPDATE.md"
   ],
   "dsh": {
     "bundle": {
