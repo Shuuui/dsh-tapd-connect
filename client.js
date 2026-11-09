@@ -100,8 +100,28 @@ window.__ModuleLoader__.load({
 .dsh-tapd-opt span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .dsh-tapd-link { color:var(--dsw-alias-brand-primary); text-decoration:none; cursor:pointer; }
 .dsh-tapd-link:hover { text-decoration:underline; }
-/* 优先级沿用 TAPD 的彩色文字样式：只上色，不加底色。 */
+/* 优先级配色。
+ *
+ * 色阶沿用 TAPD 的红/绿/蓝三档语义，但具体色值按对比度重新定：
+ * TAPD 原本的浅色值（#f85e5e/#93c36b/#97afd0）在白底上只有 2.0~3.1:1，
+ * 达不到 WCAG AA 的 4.5，小字号下几乎看不清。这里浅色改用加深版
+ * （4.7~5.6:1），暗色用提亮版（8~12:1），两套都实测过。
+ * 暗色由宿主写在 body 上的 data-ds-dark-theme 属性触发。 */
 .dsh-tapd-priority { font-weight:600; }
+.dsh-tapd-priority[data-tone="urgent"],
+.dsh-tapd-priority[data-tone="high"] { color:#cf3f3f; }
+.dsh-tapd-priority[data-tone="medium"],
+.dsh-tapd-priority[data-tone="middle"] { color:#3f7d33; }
+.dsh-tapd-priority[data-tone="low"],
+.dsh-tapd-priority[data-tone="insignificant"],
+.dsh-tapd-priority[data-tone="nicetohave"] { color:#4a6b8a; }
+body[data-ds-dark-theme] .dsh-tapd-priority[data-tone="urgent"],
+body[data-ds-dark-theme] .dsh-tapd-priority[data-tone="high"] { color:#ff8a8a; }
+body[data-ds-dark-theme] .dsh-tapd-priority[data-tone="medium"],
+body[data-ds-dark-theme] .dsh-tapd-priority[data-tone="middle"] { color:#b6e08f; }
+body[data-ds-dark-theme] .dsh-tapd-priority[data-tone="low"],
+body[data-ds-dark-theme] .dsh-tapd-priority[data-tone="insignificant"],
+body[data-ds-dark-theme] .dsh-tapd-priority[data-tone="nicetohave"] { color:#a8c0dc; }
 /* 项目 → 目录映射编辑区 */
 .dsh-tapd-map-list { display:flex; flex-direction:column; gap:6px; max-height:280px;
   overflow:auto; padding:8px 10px; border:1px solid var(--dsw-alias-border-l1);
@@ -120,7 +140,7 @@ window.__ModuleLoader__.load({
 .dsh-tapd-multi-menu { position:absolute; top:34px; left:0; z-index:20; width:max-content;
   min-width:180px; max-height:280px; overflow:auto; display:flex; flex-direction:column;
   padding:4px; border:1px solid var(--dsw-alias-border-l1); border-radius:8px;
-  background:var(--dsw-alias-bg-layer-1); box-shadow:0 8px 24px rgba(24,43,80,.16); }
+  background:var(--dsw-alias-bg-overlay); box-shadow:0 8px 24px rgba(0,0,0,.18); }
 .dsh-tapd-multi-opt { display:flex; align-items:center; gap:6px; font-size:12px;
   padding:4px 8px; border-radius:6px; cursor:pointer; }
 .dsh-tapd-multi-opt:hover { background:var(--dsw-alias-bg-layer-2); }
@@ -128,7 +148,7 @@ window.__ModuleLoader__.load({
 .dsh-tapd-multi-all { height:26px; padding:0 8px; font-size:12px; }
 /* 开始处理前的工作区确认弹窗：用强调边框从卡片流里跳出来 */
 .dsh-tapd-dialog { border-color:var(--dsw-alias-brand-primary);
-  box-shadow:0 6px 24px rgba(24,43,80,.12); }
+  box-shadow:0 6px 24px rgba(0,0,0,.14); }
 `
 
     /* -------------------------------------------------------------- */
@@ -228,14 +248,15 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * 解析一条条目的优先级展示：文字与颜色。
+     * 解析一条条目的优先级展示：文字与色阶。
      *
-     * 文字优先用 TAPD 原文（Host 的 `priorityLabel`，或条目自身的 `priority`），
-     * 颜色优先用 Host 下发的 `priorityColor`；都没有时按关键词兜底。
-     * 认不出的值原样显示且不上色，避免把陌生优先级涂成误导性的颜色。
+     * 文字优先用 TAPD 原文（Host 的 `priorityLabel`，或条目自身的 `priority`）。
+     * 颜色不在这里定死：只返回识别出的色阶键，具体色值交给 CSS，由
+     * `body[data-ds-dark-theme]` 决定浅色/暗色两套取值——这样夜间模式下
+     * 优先级文字不会因为沿用浅色而看不清。认不出的值原样显示且不上色。
      *
      * @param {object} item 条目
-     * @returns {{text: string, color: string}} 展示用文字与色值
+     * @returns {{text: string, tone: string}} 展示用文字与色阶键
      */
     function priorityView(item) {
       const raw = text(item?.priority).trim()
@@ -243,8 +264,7 @@ window.__ModuleLoader__.load({
       const key = priorityKey(raw) || priorityKey(hostLabel)
       const known = key === '' ? undefined : PRIORITY_FALLBACK[key]
       const label = hostLabel || raw || (known ? known.label : '')
-      const color = text(item?.priorityColor).trim() || (known ? known.color : '')
-      return { text: label, color: label === '' ? '' : color }
+      return { text: label, tone: label === '' ? '' : key }
     }
 
     /** 把任意值收敛成字符串（宿主字段可能缺失）。 */
@@ -1375,10 +1395,10 @@ window.__ModuleLoader__.load({
                     h(
                       'span',
                       {
-                        // 有颜色就沿用 TAPD 的彩色文字样式；认不出的优先级保持素色。
-                        className: priority.color ? 'dsh-tapd-priority' : undefined,
-                        style: priority.color ? { color: priority.color } : undefined,
-                        title: priority.color ? t('priorityFromTapd') : undefined,
+                        // 色阶交给 CSS，浅色/暗色各自取一套；认不出的保持素色。
+                        className: priority.tone ? 'dsh-tapd-priority' : undefined,
+                        'data-tone': priority.tone || undefined,
+                        title: priority.tone ? t('priorityFromTapd') : undefined,
                       },
                       priority.text,
                     ),
